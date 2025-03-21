@@ -1,6 +1,19 @@
 
 
 def connect_four_mm(contents, turn, max_depth):
+    """kind of the the main, but below are the steps
+    (1) vectorizes the str contents into 2d array (red is 1, yellow is -1)
+      - (NOTE its column-major, so [column][row], where columns 0-6 is left to right, and row 0-5 is bottom to top)
+    (2) convert player into 1, or -1
+    (3) run minimax algo
+    params:
+        contents (str): board state
+        turn (string): turn
+        max_depth (int): 
+
+    Returns:
+        string: f string of best column and amount of ndoes
+    """
     state = vectorize_input(contents)
     player = 1 if turn.lower() == "red" else -1
     best_column, nodes_explored, _ = minimax(state, player, max_depth, 0)
