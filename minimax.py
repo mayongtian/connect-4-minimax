@@ -4,7 +4,8 @@ def connect_four_mm(contents, turn, max_depth):
     state = vectorize_input(contents)
     player = 1 if turn.lower() == "red" else -1
     best_column, nodes_explored, _ = minimax(state, player, max_depth, 0)
-    return best_column, nodes_explored
+    return f"{best_column}\n{nodes_explored}"
+
 
 def minimax(state: [[int]], player: int, max_depth: int, depth) -> tuple[int, int,int]:
     """
@@ -176,13 +177,14 @@ def NUM_IN_A_ROW(count: int, state: [[int]], player: int):
 
 def EVALUATION(board):
     """
-    Actual logic for evaluating the code, kind of gave up on this part 
-
+    Actual logic for evaluating the score at each node, kind of gave up on this part, 
+    but basically this one considers whether there is a contiguous sequence already
+    and not overcount (i.e a 3 in a row should not also count for two 2 in a row)
     Params:
         board (_type_): 2d array
 
-    Returns:
-        _type_: _description_
+    Returns: value of the evaluation, it is red evaluation - yellow evaluation
+        - int: score
     """
     # Initialize score accumulators for red and yellow
     red_score = 0
