@@ -87,11 +87,7 @@ def vectorize_input(state: str) -> [[int]]:
                 board_2d[num_column][num_row] = 0
             num_column += 1
         num_row += 1 
-      
-    for col in board_2d:
-        for row in col:
-            print(f"{row}")
-        print("\n")
+    
     return board_2d
 
 def generate_child_states(state:[[int]], player: int) -> [[[int]]]:
