@@ -108,7 +108,9 @@ def generate_child_states(state:[[int]], player: int) -> [[[int]]]:
     Generates all valid moves given a state
     
     param: board state, player move 
-    return: a list containing 0-7 board states, if there is no valid moves for that row, it will contain a -1
+    return: tuple (list[states], move)
+      - list: a list containing 0-7 board states, if there is no valid moves for that row, it will contain a -1
+      - int: column the tile was placed int
     """
     #if there is now valid moves return 
     child_states = []
