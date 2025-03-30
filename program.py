@@ -1,26 +1,14 @@
-
-
-def connect_four_mm(contents, turn, max_depth):
-    """kind of the the main, but below are the steps
-    (1) vectorizes the str contents into 2d array (red is 1, yellow is -1)
-      - (NOTE its column-major, so [column][row], where columns 0-6 is left to right, and row 0-5 is bottom to top)
-    (2) convert player into 1, or -1
-    (3) run minimax algo
-    params:
-        contents (str): board state
-        turn (string): turn
-        max_depth (int): 
-
-    Returns:
-        string: f string of best column and amount of nodes
+def connect_four_ab(contents : str, turn : str, max_depth : int):
+    """
+    Copied directly from minimax
     """
     state = vectorize_input(contents)
     player = 1 if turn.lower() == "red" else -1
-    best_column, nodes_explored, _ = minimax(state, player, max_depth, 0)
+
+    best_column, nodes_explored, _ = ab_pruning(state, player, max_depth, 0, float("-inf"), float("inf"))
     return f"{best_column}\n{nodes_explored}"
 
-
-def minimax(state: list[list[int]], player: int, max_depth: int, depth) -> tuple[int, int,int]:
+def ab_pruning(state: list[list[int]], player: int, max_depth: int, depth, alpha=float("-inf"), beta=float("inf")) -> tuple[int, int,int]:
     """
     Implements the Minimax algorithm to determine the best column to play in.
 
@@ -34,13 +22,13 @@ def minimax(state: list[list[int]], player: int, max_depth: int, depth) -> tuple
         - nodes_explored is the total number of nodes explored in this subtree.
         - value is the evaluation value for the state.
     """
-    nodes_explored = 1 
-   
+
+    nodes_explored = 0
     
     #BASE CASE 1: Check if someone won
     utility = UTILITY(state)
     if utility != 0:
-        return (None, nodes_explored,utility)
+        return (None, nodes_explored, utility)
     #BASE CASE 2: Check if reached max depth
     if depth == max_depth:
         return (None, nodes_explored,EVALUATION(state))
@@ -58,15 +46,23 @@ def minimax(state: list[list[int]], player: int, max_depth: int, depth) -> tuple
     
     for child_state, col in valid_moves:
         # recursion
-        _, count_nodes, child_value = minimax(child_state, -player, max_depth, depth + 1)
+        _, count_nodes, child_value = ab_pruning(child_state, -player, max_depth, depth + 1, alpha, beta)
         nodes_explored += count_nodes
+
+        # pruning
+        if (isMax and alpha >= child_value) or (not isMax and beta <= child_value):
+            nodes_explored = 1
+        else:
+            break
         
-        # Logic for Minimax 
+        # Logic 
         if isMax and child_value > best_value:
             best_value = child_value
+            alpha = max(alpha, best_value)
             best_move = col
         elif not isMax and child_value <best_value:
             best_value = child_value
+            beta = min(beta, best_value)
             best_move = col
     
     return best_move, nodes_explored, best_value 
@@ -110,7 +106,7 @@ def generate_child_states(state:list[list[int]], player: int) -> list[list[list[
     param: board state, player move 
     return: tuple (list[states], move)
       - list: a list containing 0-7 board states, if there is no valid moves for that row, it will contain a -1
-      - int: column the tile was placed int
+      - int: column the tile was placed into
     """
     #if there is now valid moves return 
     child_states = []
@@ -123,7 +119,7 @@ def generate_child_states(state:list[list[int]], player: int) -> list[list[list[
         # otherwise, find the lowest empty row, and return a new deep copy 
         for row in range(6):
             if state[column][row] == 0:
-                # this should be a deep copy. 
+                # this should be a deep copy. ??? what does this mean
                 # new_state = [column[:] for column in state] 
                 new_state = [list(col) for col in state]
                 new_state[column][row] = player
@@ -254,4 +250,6 @@ def EVALUATION(board):
 
 if __name__ == '__main__':
     # Example function call below, you can add your own to test the connect_four_mm function
-    print(connect_four_mm(".......,.......,.......,.......,.......,.......", "red", 1))
+    print(connect_four_ab(".ryyrry,.rryry.,..y.r..,..y....,.......,.......", "red", 4))
+
+
