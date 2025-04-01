@@ -255,3 +255,4 @@ def EVALUATION(board):
 if __name__ == '__main__':
     # Example function call below, you can add your own to test the connect_four_mm function
     print(connect_four_mm(".......,.......,.......,.......,.......,.......", "red", 1))
+    print(connect_four_mm(".ryyrry,.rryry.,..y.r..,..y....,.......,.......", "red", 4))

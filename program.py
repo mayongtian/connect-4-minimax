@@ -5,17 +5,19 @@ def connect_four_ab(contents : str, turn : str, max_depth : int):
     state = vectorize_input(contents)
     player = 1 if turn.lower() == "red" else -1
 
-    best_column, nodes_explored, _ = ab_pruning(state, player, max_depth, 0, float("-inf"), float("inf"))
+    best_column, nodes_explored, _ = ab_pruning(state, player, max_depth, 0)
     return f"{best_column}\n{nodes_explored}"
 
 def ab_pruning(state: list[list[int]], player: int, max_depth: int, depth, alpha=float("-inf"), beta=float("inf")) -> tuple[int, int,int]:
     """
-    Implements the Minimax algorithm to determine the best column to play in.
+    Implements the Minimax algorithm to determine the best column to play in, now new and improved with alpha-beta pruning.
 
     :param state: The current board state (column-major: list of 7 columns, each of length 6).
     :param player: The current player (1 for red, -1 for yellow).
     :param max_depth: The maximum depth to search.
     :param depth: The current recursion depth.
+    :param alpha: the max value seen so far
+    :param beta: alpha but for min
     :return: A tuple (best_move, nodes_explored, value), where:
         - best_move is the best column (int) to play (or None if terminal).
             - NOTE: most of the time we don't care about the best_move until the final recursion, which is why its mostly not used until the end. Might cause issue for alpha beta
@@ -23,8 +25,8 @@ def ab_pruning(state: list[list[int]], player: int, max_depth: int, depth, alpha
         - value is the evaluation value for the state.
     """
 
-    nodes_explored = 0
-    
+    nodes_explored = 1
+
     #BASE CASE 1: Check if someone won
     utility = UTILITY(state)
     if utility != 0:
@@ -47,25 +49,28 @@ def ab_pruning(state: list[list[int]], player: int, max_depth: int, depth, alpha
     for child_state, col in valid_moves:
         # recursion
         _, count_nodes, child_value = ab_pruning(child_state, -player, max_depth, depth + 1, alpha, beta)
+
         nodes_explored += count_nodes
 
-        # pruning
-        if (isMax and alpha >= child_value) or (not isMax and beta <= child_value):
-            nodes_explored = 1
-        else:
-            break
-        
         # Logic 
         if isMax and child_value > best_value:
             best_value = child_value
+            best_move = col
+            # prunes if the minimising player would choose something even lower in the next layer
+            if beta <= best_value:
+                break
+            # sets alpha
             alpha = max(alpha, best_value)
-            best_move = col
-        elif not isMax and child_value <best_value:
+        elif not isMax and child_value < best_value:
             best_value = child_value
-            beta = min(beta, best_value)
             best_move = col
-    
-    return best_move, nodes_explored, best_value 
+            # prunes if the maximising player would choose something even higher in the next layer
+            if alpha >= best_value:
+                break
+            # sets beta
+            beta = min(beta, best_value)
+            
+    return best_move, nodes_explored, best_value
 
 def vectorize_input(state: str) -> list[list[int]]:
     """
@@ -250,6 +255,4 @@ def EVALUATION(board):
 
 if __name__ == '__main__':
     # Example function call below, you can add your own to test the connect_four_mm function
-    print(connect_four_ab(".ryyrry,.rryry.,..y.r..,..y....,.......,.......", "red", 4))
-
-
+    print(connect_four_ab("r..y..r,r..y..r,......r,.......,.......,.......", "red", 4))
