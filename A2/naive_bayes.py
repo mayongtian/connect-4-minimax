@@ -19,8 +19,10 @@ def classify_nb(training_filename, testing_filename):
 
     # gets means
     n_columns = 0
-    means = []
+    means_yes = []
+    means_no = []
     n_rows = 1
+    n_yes = 1
     with open(training_filename, newline="") as training_file:
         reader_training = csv.reader(training_file, delimiter=',', quotechar='|')
         # the file I submitted has a blank line at the beginning :(
@@ -29,30 +31,46 @@ def classify_nb(training_filename, testing_filename):
             first_line = reader_training.__next__()
 
         n_columns = len(first_line) - 1
-        for i in range(n_columns):
-            means.append(float(first_line[i]))
+        if first_line[n_columns] == "yes":
+            for i in range(n_columns):
+                means_yes.append(float(first_line[i]))
+                means_no.append(0)
+        else:
+            for i in range(n_columns):
+                means_no.append(float(first_line[i]))
+                means_yes.append(0)
         
         for row in reader_training:
             n_rows += 1
-            for i in range(n_columns):
-                means[i] = ( float(means[i]) * (n_rows - 1) + float(row[i]))/n_rows
+            if row[n_columns] == "yes":
+                n_yes += 1
+                for i in range(n_columns):
+                    means_yes[i] = ( float(means_yes[i]) * (n_yes - 1) + float(row[i]))/n_yes
+            else:
+                for i in range(n_columns):
+                    means_no[i] = ( float(means_no[i]) * (n_rows-n_yes - 1) + float(row[i]))/(n_rows - n_yes)
 
     # gets stdev and n_yes
-    stdev = [0] * n_columns
-    n_yes = 0
+    stdev_yes = [0] * n_columns
+    stdev_no = [0] * n_columns
     with open(training_filename, newline="") as training_file:
         reader_training = csv.reader(training_file, delimiter=',', quotechar='|')
-        sigma = [0] * n_columns # sum of square of differences
+        sigma_yes = [0] * n_columns # sum of square of differences
+        sigma_no = [0] * n_columns
         for row in reader_training:
             if row == []:
                 continue
             if row[n_columns] == "yes":
-                n_yes += 1
-            for i in range(n_columns):
-                val = float(row[i])
-                sigma[i] += (val - means[i])**2
+                for i in range(n_columns):
+                    val = float(row[i])
+                    sigma_yes[i] += (val - means_yes[i])**2
+            else:
+                for i in range(n_columns):
+                    val = float(row[i])
+                    sigma_no[i] += (val - means_no[i]) ** 2
 
-        for i in range(n_columns): stdev[i] = math.sqrt(sigma[i]/(n_rows - 1))
+        for i in range(n_columns): stdev_yes[i] = math.sqrt(sigma_yes[i]/(n_yes - 1))
+        for i in range(n_columns): stdev_no[i] = math.sqrt(sigma_no[i]/(n_rows - n_yes - 1))
 
     # getting bayes probability for each testing thing
     prob_yes = []
@@ -68,10 +86,10 @@ def classify_nb(training_filename, testing_filename):
             if row == []:
                 continue
             for i in range(n_columns):
-                prob_yes[-1] *= (bayes_gauss(float(row[i]), stdev[i], means[i]))
-                prob_no[-1] *= (bayes_gauss(float(row[i]), stdev[i], means[i]))
-                evidence_yes *= (bayes_gauss(float(row[i]), stdev[i], means[i]))
-                evidence_no *= (bayes_gauss(float(row[i]), stdev[i], means[i]))
+                prob_yes[-1] *= (bayes_gauss(float(row[i]), stdev_yes[i], means_yes[i]))
+                prob_no[-1] *= (bayes_gauss(float(row[i]), stdev_no[i], means_no[i]))
+                evidence_yes *= (bayes_gauss(float(row[i]), stdev_yes[i], means_yes[i]))
+                evidence_no *= (bayes_gauss(float(row[i]), stdev_no[i], means_no[i]))
     for i in range(len(prob_no)):
         prob_yes[i] /= evidence_yes + evidence_no
         prob_no[i] /= evidence_yes + evidence_no
