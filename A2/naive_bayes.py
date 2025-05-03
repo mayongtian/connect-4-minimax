@@ -37,12 +37,15 @@ def classify_nb(training_filename, testing_filename):
             for i in range(n_columns):
                 means[i] = ( float(means[i]) * (n_rows - 1) + float(row[i]))/n_rows
 
-    # gets stdev
+    # gets stdev and n_yes
     stdev = [0] * n_columns
+    n_yes = 0
     with open(training_filename, newline="") as training_file:
         reader_training = csv.reader(training_file, delimiter=',', quotechar='|')
         sigma = [0] * n_columns # sum of square of differences
         for row in reader_training:
+            if row[n_columns] == "yes":
+                n_yes += 1
             if row == []:
                 continue
             for i in range(n_columns):
@@ -51,6 +54,14 @@ def classify_nb(training_filename, testing_filename):
 
         for i in range(n_columns): stdev[i] = math.sqrt(sigma[i]/(n_rows - 1))
 
+def bayes_gauss(x : float, sigma : float, mu : float) -> float:
+    """
+    :param x: the feature value
+    :param sigma: the standard deviation
+    :param mu: the mean
+    :ret: the probability P(x|yes)
+    """
+    return 1/(sigma * math.sqrt(math.pi * 2)) * math.exp(-(x - mu)**2 / (2 * sigma**2))
 
 def isfloat(num):
     try:
