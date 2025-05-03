@@ -51,8 +51,8 @@ def classify_nb(training_filename, testing_filename):
                     means_no[i] = ( float(means_no[i]) * (n_rows-n_yes - 1) + float(row[i]))/(n_rows - n_yes)
 
     # gets stdev and n_yes
-    stdev_yes = [0] * n_columns
-    stdev_no = [0] * n_columns
+    var_yes = [0] * n_columns
+    var_no = [0] * n_columns
     with open(training_filename, newline="") as training_file:
         reader_training = csv.reader(training_file, delimiter=',', quotechar='|')
         sigma_yes = [0] * n_columns # sum of square of differences
@@ -69,8 +69,8 @@ def classify_nb(training_filename, testing_filename):
                     val = float(row[i])
                     sigma_no[i] += (val - means_no[i]) ** 2
 
-        for i in range(n_columns): stdev_yes[i] = math.sqrt(sigma_yes[i]/(n_yes - 1))
-        for i in range(n_columns): stdev_no[i] = math.sqrt(sigma_no[i]/(n_rows - n_yes - 1))
+        for i in range(n_columns): var_yes[i] = sigma_yes[i]/(n_yes - 1)
+        for i in range(n_columns): var_no[i] = sigma_no[i]/(n_rows - n_yes - 1)
 
     # getting bayes probability for each testing thing
     prob_yes = []
@@ -86,10 +86,10 @@ def classify_nb(training_filename, testing_filename):
             if row == []:
                 continue
             for i in range(n_columns):
-                prob_yes[-1] *= (bayes_gauss(float(row[i]), stdev_yes[i], means_yes[i]))
-                prob_no[-1] *= (bayes_gauss(float(row[i]), stdev_no[i], means_no[i]))
-                evidence_yes *= (bayes_gauss(float(row[i]), stdev_yes[i], means_yes[i]))
-                evidence_no *= (bayes_gauss(float(row[i]), stdev_no[i], means_no[i]))
+                prob_yes[-1] *= (bayes_gauss(float(row[i]), var_yes[i], means_yes[i]))
+                prob_no[-1] *= (bayes_gauss(float(row[i]), var_no[i], means_no[i]))
+                evidence_yes *= (bayes_gauss(float(row[i]), var_yes[i], means_yes[i]))
+                evidence_no *= (bayes_gauss(float(row[i]), var_no[i], means_no[i]))
     for i in range(len(prob_no)):
         prob_yes[i] /= evidence_yes + evidence_no
         prob_no[i] /= evidence_yes + evidence_no
@@ -97,19 +97,17 @@ def classify_nb(training_filename, testing_filename):
             ret.append("yes")
         else:
             ret.append("no")
-    print(prob_yes)
-    print(prob_no)
     return ret
 
 
-def bayes_gauss(x : float, stdev : float, mu : float) -> float:
+def bayes_gauss(x : float, var : float, mu : float) -> float:
     """
     :param x: the feature value
-    :param stdev: the standard deviation
+    :param var: the standard deviation
     :param mu: the mean
     :ret: the probability P(x|H)
     """
-    return 1/(stdev * math.sqrt(math.pi * 2)) * math.exp(-(x - mu)**2 / (2 * stdev**2))
+    return 1/(math.sqrt(var * math.pi * 2)) * math.exp(-(x - mu)**2 / (2 * var))
 
 def isfloat(num):
     try:
