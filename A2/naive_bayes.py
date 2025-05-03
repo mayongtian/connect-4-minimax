@@ -81,8 +81,8 @@ def classify_nb(training_filename, testing_filename):
     with open(testing_filename, newline="") as testing_file:
         reader_testing = csv.reader(testing_file, delimiter=',', quotechar='|')
         for row in reader_testing:
-            prob_yes.append(1)
-            prob_no.append(1)
+            prob_yes.append(float(n_yes)/n_rows)
+            prob_no.append(float(n_rows - n_yes)/n_rows)
             if row == []:
                 continue
             for i in range(n_columns):
@@ -108,13 +108,3 @@ def bayes_gauss(x : float, var : float, mu : float) -> float:
     :ret: the probability P(x|H)
     """
     return 1/(math.sqrt(var * math.pi * 2)) * math.exp(-(x - mu)**2 / (2 * var))
-
-def isfloat(num):
-    try:
-        float(num)
-        return True
-    except ValueError:
-        return False
-    
-
-print(classify_nb("A2/pima-indians-diabetes-normalized.csv", "A2/pima-indians-diabetes-test.csv"))
