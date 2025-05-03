@@ -44,24 +44,54 @@ def classify_nb(training_filename, testing_filename):
         reader_training = csv.reader(training_file, delimiter=',', quotechar='|')
         sigma = [0] * n_columns # sum of square of differences
         for row in reader_training:
-            if row[n_columns] == "yes":
-                n_yes += 1
             if row == []:
                 continue
+            if row[n_columns] == "yes":
+                n_yes += 1
             for i in range(n_columns):
                 val = float(row[i])
                 sigma[i] += (val - means[i])**2
 
         for i in range(n_columns): stdev[i] = math.sqrt(sigma[i]/(n_rows - 1))
 
-def bayes_gauss(x : float, sigma : float, mu : float) -> float:
+    # getting bayes probability for each testing thing
+    prob_yes = []
+    prob_no = []
+    evidence_yes = float(n_yes)/n_rows
+    evidence_no = float(n_rows - n_yes)/n_rows
+    ret = []
+    with open(testing_filename, newline="") as testing_file:
+        reader_testing = csv.reader(testing_file, delimiter=',', quotechar='|')
+        for row in reader_testing:
+            prob_yes.append(1)
+            prob_no.append(1)
+            if row == []:
+                continue
+            for i in range(n_columns):
+                prob_yes[-1] *= (bayes_gauss(float(row[i]), stdev[i], means[i]))
+                prob_no[-1] *= (bayes_gauss(float(row[i]), stdev[i], means[i]))
+                evidence_yes *= (bayes_gauss(float(row[i]), stdev[i], means[i]))
+                evidence_no *= (bayes_gauss(float(row[i]), stdev[i], means[i]))
+    for i in range(len(prob_no)):
+        prob_yes[i] /= evidence_yes + evidence_no
+        prob_no[i] /= evidence_yes + evidence_no
+        if prob_yes[i] >= prob_no[i]:
+            ret.append("yes")
+        else:
+            ret.append("no")
+    print(prob_yes)
+    print(prob_no)
+    return ret
+
+
+def bayes_gauss(x : float, stdev : float, mu : float) -> float:
     """
     :param x: the feature value
-    :param sigma: the standard deviation
+    :param stdev: the standard deviation
     :param mu: the mean
-    :ret: the probability P(x|yes)
+    :ret: the probability P(x|H)
     """
-    return 1/(sigma * math.sqrt(math.pi * 2)) * math.exp(-(x - mu)**2 / (2 * sigma**2))
+    return 1/(stdev * math.sqrt(math.pi * 2)) * math.exp(-(x - mu)**2 / (2 * stdev**2))
 
 def isfloat(num):
     try:
@@ -71,4 +101,4 @@ def isfloat(num):
         return False
     
 
-print(classify_nb("A2/pima-indians-diabetes-normalized.csv", "A2/pima-indians-diabetes-test-discrete.csv"))
+print(classify_nb("A2/pima-indians-diabetes-normalized.csv", "A2/pima-indians-diabetes-test.csv"))
