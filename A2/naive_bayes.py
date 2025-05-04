@@ -26,11 +26,15 @@ def classify_nb(training_filename, testing_filename):
     with open(training_filename, newline="") as training_file:
         reader_training = csv.reader(training_file, delimiter=',', quotechar='|')
         # the file I submitted has a blank line at the beginning :(
-        first_line = reader_training.__next__()
+        try:
+            first_line = reader_training.__next__()
+        except StopIteration:
+            return []
         while first_line == []:
             first_line = reader_training.__next__()
 
         n_columns = len(first_line) - 1
+
         if first_line[n_columns] == "yes":
             for i in range(n_columns):
                 means_yes.append(float(first_line[i]))
@@ -68,9 +72,6 @@ def classify_nb(training_filename, testing_filename):
                 for i in range(n_columns):
                     val = float(row[i])
                     sigma_no[i] += (val - means_no[i]) ** 2
-
-        for i in range(n_columns): var_yes[i] = sigma_yes[i]/(n_yes - 1)
-        for i in range(n_columns): var_no[i] = sigma_no[i]/(n_rows - n_yes - 1)
 
     # getting bayes probability for each testing thing
     prob_yes = []
