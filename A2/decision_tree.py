@@ -2,23 +2,34 @@ import csv
 import math
 
 print_tree = False
+n_nominals = 4
 nominals = ["low", "medium", "high", "very high"]
 
 class Node:
-    def __init__(self, name, idx = None, isleaf = False, value = None):
+    def __init__(self, name, idx = None, value = None):
         self.name = name
         self.idx = idx
-        self.children = []
-        self.isleaf = isleaf
         self.value = value
+        self.children = {}
+    
+    def search(self, v, training_data : list):
+        """
+        :param v: a test vector
+        """
+        if self.value != None:
+            return self.value
+        attr_val = v[self.idx]
+        if attr_val in self.children:
+            return self.children[attr_val].search(v, training_data)
+        else:
+            return majority(training_data)
 
 class Tree:
     def __init__(self, root : Node, idx : int = None):
-        self.root = root
+        self.root = root 
         self.idx = idx
 
 def classify_dt(training_filename, testing_filename):
-
     # training
     data = []
     n_yes = 0
@@ -38,21 +49,35 @@ def classify_dt(training_filename, testing_filename):
             data.append((row))
 
     # gets the first node
-    tree = construct_tree(n_columns, data, first_line, first=True)
+    tree = construct_tree(n_columns, data, first_line, [])
 
     if print_tree:
-        display_tree()
+        display_tree([tree])
             
     # testing
     ret = []
     with open(testing_filename, newline="") as testing_file:
         reader_testing = csv.reader(testing_file)
         for row in reader_testing:
-            ret.append(search(tree, row))
+            ret.append(tree.search(row, data))
     return ret
 
-def display_tree():
-    pass
+def display_tree(active_nodes : list[Node], depth : int = 1):
+    line = ""
+    next_layer = []
+    # base case
+    if active_nodes == []:
+        return
+    # recursing
+    for i in active_nodes:
+        if i == None:
+            continue
+        line += i.name + " " * int(50 / depth) + "|" + " " * int(50/depth)
+        for c in i.children.values():
+            next_layer.append(c)
+    print(line)
+    display_tree(next_layer, depth + 1)
+
 
 def num(val : str):
     """
@@ -81,7 +106,12 @@ def entropy(data : list):
     for row in data:
         if row[-1] == "yes":
             n_yes += 1
-    return -float(n_yes)/n_total*math.log(float(n_yes)/n_total) - float(n_total - n_yes) * math.log(float(n_total)-n_yes)
+
+    if n_yes == 0 or n_yes == n_total:
+        return 0
+    p = n_yes/n_total
+    h = -p * math.log2(p) - (1-p) * math.log2(1-p)
+    return h
 
 def info_gain(data, idx):
     """
@@ -90,79 +120,70 @@ def info_gain(data, idx):
     :return: the information gain
     """
     t1 = entropy(data)
-    pop_spread = [0] * 4
-    split_data = [[]*4]
+    split_data = [[] for _ in range(n_nominals)]
+    n_total = len(data)
 
     for row in data:
-        if row[idx] == "low":
-            pop_spread[0] += 1
-            split_data[0].append(row)
-        elif row[idx] == "medium":
-            pop_spread[1] += 1
-            split_data[1].append(row)
-        elif row[idx] == "high":
-            pop_spread[2] += 1
-            split_data[2].append(row)
-        elif row[idx] == "very high":
-            pop_spread[3] += 1
-            split_data[3].append(row)
+        for i in range(n_nominals):
+            if row[idx] == nominals[i]:
+                split_data[i].append(row)
+                break
         else:
             print("something weird")
     
-    n_total = sum(pop_spread)
-    ret = 0, split_data
-
-    for i in range(4):
-        ret -= float(pop_spread[i])/n_total * entropy(split_data[i])
-    return ret
-
-def construct_tree(n_columns, data, attr_lst, first = False):
-    idx = -1
-    lowest_entropy = entropy(data)
-    split_data = []
-
-    # base cases
-    uniform_class = True
-    uniform_attr = True
-    for row in data:
-        if row[n_columns] != data[0][n_columns]:
-            uniform_class = False
-            break
-        elif row[:-1] != data[0][:-1]:
-            uniform_attr = False
-            break
-    if uniform_class or uniform_attr:
-        n = Node(majority(data), isleaf=True, value=majority(data))
-        if first:
-            return Tree(n)
-        return
-    
-    for i in range(n_columns):
-        d, t2 = info_gain(data, i)
-        gain = entropy(data) - t2
-        if gain < lowest_entropy:
-            idx = i
-            lowest_entropy = gain
-            split_data = d
-
-    n = Node(attr_lst[idx], idx)
-
-    if first:
-        tree = Tree(n, idx)
-
-    for i in range(4):
-        # the last base case
+    t2 = 0
+    for i in range(n_nominals):
         if split_data[i] == []:
-            n.children.append(Node(majority(data), isleaf=True, value=majority(data)))
-        else:
-            n.children.append(construct_tree(n_columns, split_data[i], attr_lst))
+            continue
+        t2 += len(split_data[i])/n_total * entropy(split_data[i])
+    return t1 - t2, split_data
 
-    if first:
-        return tree
-    else:
-        return n
+def construct_tree(n_columns : int, data : list, attr_list : list, used_attr : list):
+    # Edge case
+    if data == []:
+        return None
     
-def majority(data : list):
+    # Base case 1: if they are all yes or all no
+    clas = data[0][n_columns]
+    for i in data:
+        if i[-1] != clas:
+            break
+    else:
+        return Node(clas, value=clas)
+    
+    # base case 2: if nodes have been constructed for all attrs
+    mode = majority(data)
+    if len(used_attr) == n_columns:
+        return Node(mode, value=mode)
+    
+    # splitting
+    idx = None
+    best_gain = -1
+    new_data = []
+    for i in range(n_columns):
+        if i in used_attr:
+            continue
+        gain, split_data = info_gain(data, i)
+        if gain > best_gain:
+            best_gain = gain
+            idx = i
+            new_data = split_data
+
+    # base case 3: finding nothing
+    if idx == None:
+        return Node(mode, value=mode)
+    
+    n = Node(attr_list[idx], idx)
+
+    for i in range(len(new_data)):
+        # base case 4: the list is empty
+        if new_data[i] == []:
+            n.children[nominals[i]] = Node(mode, value=mode)
+        else:
+            n.children[nominals[i]] = construct_tree(n_columns, new_data[i], attr_list, used_attr + [idx])
+    return n
+        
+def majority(data : list)->str:
     n_yes = 0
     n_no = 0
     for row in data:
@@ -175,16 +196,4 @@ def majority(data : list):
     else:
         return "no"
     
-def search(tree : Tree, v : list):
-    n = tree.root
-    if n.isleaf:
-        return n.value
-    idx = num(v[tree.idx])
-
-    while not n.isleaf:
-        n = n.children[idx]
-        idx = num(v[n.idx])
-
-    return n.value
-            
-#print(classify_dt("A2/pima-indians-diabetes-discrete.csv", "A2/pima-indians-diabetes-test-discrete.csv"))
+print(classify_dt("A2/pima-indians-diabetes-discrete.csv", "A2/pima-indians-diabetes-test-discrete.csv"))
