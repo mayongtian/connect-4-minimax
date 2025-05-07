@@ -1,9 +1,13 @@
 import csv
 import math
 
-print_tree = False
+print_tree = True
 n_nominals = 4
 nominals = ["low", "medium", "high", "very high"]
+min_threshold_tentative = 0.75
+
+
+# implements pruning
 
 class Node:
     def __init__(self, name, idx = None, value = None):
@@ -11,6 +15,7 @@ class Node:
         self.idx = idx
         self.value = value
         self.children = {}
+        self.prunable = True # new variable so that the pruner doesnt get stuck
     
     def search(self, v, training_data : list):
         """
@@ -23,17 +28,55 @@ class Node:
             return self.children[attr_val].search(v, training_data)
         else:
             return majority(training_data)
+        
+    def validate(self, data : list):
+        n_total = len(data)
+        n_success = 0
+        for row in data:
+            n_success += row[-1] == self.search(row[:-1], data)
+        return n_success / n_total
+    
+    def is_max_depth(self):
+        for c in self.children.values():
+            if c.value == None:
+                return False
+        return True
+    
+def prune(root : Node, n: Node, data : list):
+    # finds some prunable max-depth non-leaf node
+    prunable = False
+    split_data = split(n.idx, data)
+    for c in n.children.keys():
+        child = n.children[c] # type: Node
 
-class Tree:
-    def __init__(self, root : Node, idx : int = None):
-        self.root = root 
-        self.idx = idx
+        if child.value != None:
+            continue
+        elif not child.prunable:
+            continue
+        elif child.is_max_depth():
+            # base case
+            init_validity = root.validate(data)
+            idx = nominals.index(c)
+            nom = majority(split_data[idx])
+            n.children[c] = Node(nom, value=nom)
+            if root.validate(data) < init_validity:
+                n.children[c] = child
+            else:
+                print("pruned")
+            return
+        else:
+            prunable = True
+            idx = nominals.index(c)
+            prune(root, child, split_data[idx])
+    n.prunable = prunable
 
 def classify_dt(training_filename, testing_filename):
     # training
     data = []
     n_yes = 0
     n_total = 0
+
+    # gets data from csv
     with open(training_filename, newline="") as training_file:
         reader_training = csv.reader(training_file)
         # gets only the first line, which is useless anyway coz its just data
@@ -47,19 +90,26 @@ def classify_dt(training_filename, testing_filename):
             if row[n_columns] == "yes":
                 n_yes += 1
             data.append((row))
-
-    # gets the first node
+        
+    # gets the tree from training data
     tree = construct_tree(n_columns, data, first_line, [])
-
     if print_tree:
         display_tree([tree])
-            
+
+    # subtree replacement
+    prune(tree, tree, data)
+
+    if print_tree:
+        print("brah")
+        display_tree([tree])
+
     # testing
     ret = []
     with open(testing_filename, newline="") as testing_file:
         reader_testing = csv.reader(testing_file)
         for row in reader_testing:
             ret.append(tree.search(row, data))
+
     return ret
 
 def display_tree(active_nodes : list[Node], depth : int = 1):
@@ -120,16 +170,9 @@ def info_gain(data, idx):
     :return: the information gain
     """
     t1 = entropy(data)
-    split_data = [[] for _ in range(n_nominals)]
     n_total = len(data)
+    split_data = split(idx, data)
 
-    for row in data:
-        for i in range(n_nominals):
-            if row[idx] == nominals[i]:
-                split_data[i].append(row)
-                break
-        else:
-            print("something weird")
     
     t2 = 0
     for i in range(n_nominals):
@@ -137,6 +180,17 @@ def info_gain(data, idx):
             continue
         t2 += len(split_data[i])/n_total * entropy(split_data[i])
     return t1 - t2, split_data
+
+def split(idx : int, data : list):
+    split_data = [[] for _ in range(n_nominals)]
+    for row in data:
+        for i in range(n_nominals):
+            if row[idx] == nominals[i]:
+                split_data[i].append(row)
+                break
+        else:
+            print(f"something weird: {row[idx]} and {nominals[i]}")
+    return split_data
 
 def construct_tree(n_columns : int, data : list, attr_list : list, used_attr : list):
     # Edge case
@@ -195,3 +249,4 @@ def majority(data : list)->str:
         return "yes"
     else:
         return "no"
+    
