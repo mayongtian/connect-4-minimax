@@ -61,8 +61,6 @@ def prune(root : Node, n: Node, data : list):
             n.children[c] = Node(nom, value=nom)
             if root.validate(data) < init_validity:
                 n.children[c] = child
-            else:
-                print("pruned")
             return
         else:
             prunable = True
@@ -93,15 +91,12 @@ def classify_dt(training_filename, testing_filename):
         
     # gets the tree from training data
     tree = construct_tree(n_columns, data, first_line, [])
-    if print_tree:
-        display_tree(tree)
 
     # subtree replacement
     prune(tree, tree, data)
 
     if print_tree:
-        print("brah")
-        display_tree([tree])
+        display_tree(tree)
 
     # testing
     ret = []
@@ -112,11 +107,15 @@ def classify_dt(training_filename, testing_filename):
 
     return ret
 
-def display_tree(node : Node, depth = 0, cond = ""):
+def display_tree(node : Node, depth = 0, cond = "", n_nodes = 0):
+    n_nodes+= 1
     line = "| " * depth + cond
+    if node.value != None:
+        return n_nodes
     print(line)
     for c, n in node.children.items():
-        display_tree(n, depth + 1, f"{n.name} == {c}")
+        n_nodes = display_tree(n, depth + 1, f"{node.name} == {c}", n_nodes)
+    return n_nodes
 
 def num(val : str):
     """
@@ -239,3 +238,4 @@ def majority(data : list)->str:
     else:
         return "no"
     
+classify_dt("A2/pima-indians-diabetes-discrete.csv", "A2/pima-indians-diabetes-test-discrete.csv")

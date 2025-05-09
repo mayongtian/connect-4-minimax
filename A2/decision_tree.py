@@ -80,9 +80,11 @@ def classify_dt(training_filename, testing_filename):
 
 def display_tree(node : Node, depth = 0, cond = ""):
     line = "| " * depth + cond
+    if node.value != None:
+        return
     print(line)
     for c, n in node.children.items():
-        display_tree(n, depth + 1, f"{n.name} == {c}")
+        display_tree(n, depth + 1, f"{node.name} == {c}")
 
 
 def num(val : str):
@@ -201,3 +203,4 @@ def majority(data : list)->str:
         return "yes"
     else:
         return "no"
+
