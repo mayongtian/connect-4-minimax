@@ -94,7 +94,7 @@ def classify_dt(training_filename, testing_filename):
     # gets the tree from training data
     tree = construct_tree(n_columns, data, first_line, [])
     if print_tree:
-        display_tree([tree])
+        display_tree(tree)
 
     # subtree replacement
     prune(tree, tree, data)
@@ -112,22 +112,11 @@ def classify_dt(training_filename, testing_filename):
 
     return ret
 
-def display_tree(active_nodes : list[Node], depth : int = 1):
-    line = ""
-    next_layer = []
-    # base case
-    if active_nodes == []:
-        return
-    # recursing
-    for i in active_nodes:
-        if i == None:
-            continue
-        line += i.name + " " * int(50 / depth) + "|" + " " * int(50/depth)
-        for c in i.children.values():
-            next_layer.append(c)
+def display_tree(node : Node, depth = 0, cond = ""):
+    line = "| " * depth + cond
     print(line)
-    display_tree(next_layer, depth + 1)
-
+    for c, n in node.children.items():
+        display_tree(n, depth + 1, f"{n.name} == {c}")
 
 def num(val : str):
     """

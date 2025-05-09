@@ -1,7 +1,7 @@
 import csv
 import math
 
-print_tree = False
+print_tree = True
 n_nominals = 4
 nominals = ["low", "medium", "high", "very high"]
 
@@ -52,7 +52,7 @@ def classify_dt(training_filename, testing_filename):
     tree = construct_tree(n_columns, data, first_line, [])
 
     if print_tree:
-        display_tree([tree])
+        display_tree(tree)
             
     # testing
     ret = []
@@ -62,21 +62,27 @@ def classify_dt(training_filename, testing_filename):
             ret.append(tree.search(row, data))
     return ret
 
-def display_tree(active_nodes : list[Node], depth : int = 1):
-    line = ""
-    next_layer = []
-    # base case
-    if active_nodes == []:
-        return
-    # recursing
-    for i in active_nodes:
-        if i == None:
-            continue
-        line += i.name + " " * int(50 / depth) + "|" + " " * int(50/depth)
-        for c in i.children.values():
-            next_layer.append(c)
+# def display_tree(active_nodes : list[Node], depth : int = 1):
+#     line = ""
+#     next_layer = []
+#     # base case
+#     if active_nodes == []:
+#         return
+#     # recursing
+#     for i in active_nodes:
+#         if i == None:
+#             continue
+#         line += i.name + " " * int(50 / depth) + "|" + " " * int(50/depth)
+#         for c in i.children.values():
+#             next_layer.append(c)
+#     print(line)
+#     display_tree(next_layer, depth + 1)
+
+def display_tree(node : Node, depth = 0, cond = ""):
+    line = "| " * depth + cond
     print(line)
-    display_tree(next_layer, depth + 1)
+    for c, n in node.children.items():
+        display_tree(n, depth + 1, f"{n.name} == {c}")
 
 
 def num(val : str):
